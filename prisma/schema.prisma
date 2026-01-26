@@ -1,0 +1,229 @@
+// This is your Prisma schema file for SSO service (Merged with LinkHub)
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./erd.svg"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  // SSO Addition: username (optional for now to support existing users)
+  username      String?   @unique
+  password      String?   // Bcrypt hashed password (optional for OAuth users)
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  manychatId    String?   @unique @map("manychat_id") // ManyChat integration
+  whatsapp      String?   // Phone number synced with WhatsApp
+  go            Boolean   @default(false)
+  mcn           Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // LinkHub Relations
+  profiles         Profile[]
+  accounts         Account[]
+  sessions         Session[]
+  aiGeneratedPages AIGeneratedPage[]
+  
+  // SSO Relation
+  refreshTokens RefreshToken[]
+  commission    Commission?
+  kasbons       Kasbon[]
+}
+
+// Commission Model - tracks user earnings in Rupiah (IDR)
+model Commission {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paidCommission       BigInt?  @map("paid_commission")       // Amount paid in Rupiah (IDR)
+  pendingCommission    BigInt?  @map("pending_commission")    // Amount pending in Rupiah (IDR)
+  cancelledCommission  BigInt?  @map("cancelled_commission")  // Sum of cancelled order commissions
+  agencyPercentage     Int?     @map("agency_percentage")     // Highest agency commission rate (%)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// Kasbon Status Enum
+enum KasbonStatus {
+  REQUESTED  // Just submitted by user
+  PENDING    // Under admin review
+  COMPLETED  // Paid out to user
+  REJECTED   // Declined by admin
+}
+
+// Kasbon Model - tracks user kasbon requests
+model Kasbon {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    BigInt       // Requested amount in IDR
+  status    KasbonStatus @default(REQUESTED)
+  note      String?      // Optional note from user
+  adminNote String?      @map("admin_note") // Admin response/note
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([userId])
+}
+
+// SSO Model
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique  // The jti (JWT ID)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// --- LinkHub Models Below ---
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id                  String   @id @default(cuid())
+  username            String   @unique
+  displayName         String
+  bio                 String?
+  avatarUrl           String?
+  
+  // Link to user who owns this profile (nullable for existing profiles)
+  userId              String?
+  user                User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Background customization
+  backgroundColor     String   @default("#0f172a") // slate-950
+  backgroundType      String   @default("solid") // solid, gradient, image
+  backgroundGradient  String?  // e.g., "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+  backgroundImage     String?  // URL to background image
+  
+  // Profile card customization
+  profileTextColor    String   @default("#f1f5f9") // slate-100
+  profileAccentColor  String   @default("#10b981") // emerald-500
+  profileBioColor     String   @default("#94a3b8") // slate-400
+  
+  // Font customization
+  fontFamily          String   @default("Inter") // Inter, Space Grotesk, Poppins, Roboto, etc.
+  
+  // Avatar customization
+  avatarBorderColor   String   @default("#10b981") // emerald-500
+  avatarBorderWidth   Int      @default(4)
+  
+  // Global link button style defaults
+  linkButtonStyle     String   @default("rounded") // rounded, square, pill
+  linkButtonColor     String   @default("#ffffff") // Button background
+  linkButtonTextColor String   @default("#0f172a") // Button text color
+  linkButtonBorder    String   @default("none") // none, solid, gradient
+  linkButtonBorderColor String @default("#10b981")
+  linkButtonShadow    String   @default("md") // none, sm, md, lg, xl, hard
+  linkButtonShadowColor String @default("#000000") // Color for shadow (esp. hard shadow)
+  linkButtonAnimation String   @default("scale") // none, scale, slide, glow
+  linkButtonBorderWidth Int    @default(0) // 0-8px
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  links               Link[]
+}
+
+model Link {
+  id                  String   @id @default(cuid())
+  title               String
+  url                 String
+  icon                String   @default("")
+  order               Int
+  enabled             Boolean  @default(true)
+  type                String   @default("classic") // classic, icon, header
+  
+  // Individual link customization (overrides profile defaults)
+  buttonColor         String?  // Custom button background color
+  textColor           String?  // Custom text color
+  borderColor         String?  // Custom border color
+  borderStyle         String?  // none, solid, gradient
+  borderWidth         Int?     // Custom border width
+  buttonStyle         String?  // rounded, square, pill
+  shadow              String?  // none, sm, md, lg, xl, hard
+  shadowColor         String?  // Custom shadow color
+  animation           String?  // none, scale, slide, glow
+  iconColor           String?  // Custom icon color
+  thumbnail           String?  // URL to favicon/logo image for the link
+  
+  profileId           String
+  profile             Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model AIGeneratedPage {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Generation inputs
+  prompt          String   // User's description
+  profession      String?  // e.g., "Photographer", "Developer"
+  style           String   @default("modern") // modern, minimal, creative, professional
+  colorScheme     String   @default("dark")   // dark, light, purple, ocean, sunset, forest
+  
+  // Generated content
+  generatedHtml   String   // Full HTML with Tailwind classes
+  generatedCss    String?  // Extracted CSS content for cloned pages
+  
+  // Clone-specific fields
+  sourceType      String   @default("generated") // 'clone' | 'generated'
+  sourceUrl       String?  // Original Linktree URL (for clones)
+  
+  // Publishing
+  slug            String   @unique // URL slug (like username)
+  isPublished     Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

@@ -1,0 +1,4 @@
+username,password,email,name,whatsapp,go,mcn
+user1,Password123!,user1@example.com,User One,6281234567891,true,false
+user2,Password123!,user2@example.com,User Two,6281234567892,false,true
+user3,Password123!,user3@example.com,User Three,6281234567893,false,false
