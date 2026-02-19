@@ -18,7 +18,7 @@ Setelah deploy, dapat URL HTTPS (mis. `https://sso-entroly.vercel.app`) → bisa
 2. **Import** repo GitHub kamu (pilih repo `entroly_sso` atau nama repo-nya).
 3. **Framework Preset:** Next.js (terdeteksi otomatis).
 4. **Build & Output:**
-   - **Build Command:** `npm run vercel-build` (supaya Prisma generate + next build; jangan pakai `next build && pm2 restart`).
+   - **Build Command:** `npm run vercel-build` (supaya Prisma generate + next build; jangan pakai `next build && pm2 restart`). Script ini memakai `DISABLE_ERD=true` agar generator ERD (yang butuh Puppeteer/Chrome) tidak dijalankan di Vercel.
    - **Output Directory:** (kosongkan, default Next.js).
    - **Install Command:** `npm install` (default).
 5. **Root Directory:** (kosongkan kalau repo root = project).
