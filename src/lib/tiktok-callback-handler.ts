@@ -1,3 +1,8 @@
+/**
+ * TikTok Login Kit for Web – handle authorization response & obtain access_token.
+ * Follows: https://developers.tiktok.com/doc/login-kit-web/
+ * (Manage authorization response: code, state, error, error_description → Manage access token)
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateAccessToken, generateRefreshToken } from "@/lib/jwt";
@@ -5,10 +10,12 @@ import { setAuthCookies } from "@/lib/cookies";
 
 const STATE_COOKIE = "tiktok_oauth_state";
 const REDIRECT_COOKIE = "tiktok_oauth_redirect";
+const CODE_VERIFIER_COOKIE = "tiktok_oauth_code_verifier";
 
 function clearOAuthCookies(res: NextResponse) {
     res.cookies.set(STATE_COOKIE, "", { path: "/", maxAge: 0 });
     res.cookies.set(REDIRECT_COOKIE, "", { path: "/", maxAge: 0 });
+    res.cookies.set(CODE_VERIFIER_COOKIE, "", { path: "/", maxAge: 0 });
 }
 
 /**
@@ -27,6 +34,7 @@ export async function handleTiktokCallback(
 
     const stateFromCookie = request.cookies.get(STATE_COOKIE)?.value;
     const redirectTo = request.cookies.get(REDIRECT_COOKIE)?.value || "/";
+    const codeVerifier = request.cookies.get(CODE_VERIFIER_COOKIE)?.value;
 
     if (error || !code) {
         // Log so we can see TikTok's reason (e.g. redirect_uri mismatch)
@@ -38,6 +46,13 @@ export async function handleTiktokCallback(
     }
 
     if (!stateFromCookie || stateFromCookie !== stateFromTiktok) {
+        const res = NextResponse.redirect(new URL("/login?error=Invalid+state", request.url));
+        clearOAuthCookies(res);
+        return res;
+    }
+
+    if (!codeVerifier) {
+        console.error("TikTok callback: missing code_verifier cookie (PKCE)");
         const res = NextResponse.redirect(new URL("/login?error=Invalid+state", request.url));
         clearOAuthCookies(res);
         return res;
@@ -65,6 +80,7 @@ export async function handleTiktokCallback(
                 code,
                 grant_type: "authorization_code",
                 redirect_uri: redirectUri,
+                code_verifier: codeVerifier,
             }),
         });
 

@@ -1,5 +1,7 @@
 # Deploy ke Production (sso.entro.ly)
 
+**Test dulu via TikTok Sandbox?** → lihat [SANDBOX.md](./SANDBOX.md).
+
 ## 1. Environment variables (set di server / hosting)
 
 Set variabel berikut di production. **Jangan** commit `.env` atau `.env.production`.
