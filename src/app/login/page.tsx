@@ -174,7 +174,7 @@ function LoginForm() {
 
                     <button
                         type="button"
-                        onClick={() => window.location.href = "/api/auth/tiktok/login"}
+                        onClick={() => window.location.href = `/api/auth/tiktok/login${redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
                         className="w-full py-3 px-4 bg-[#000000] hover:bg-[#111111] border border-slate-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
                     >
                         <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
