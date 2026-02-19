@@ -6,10 +6,11 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-generator erd {
-  provider = "prisma-erd-generator"
-  output   = "./erd.svg"
-}
+// ERD generator disabled for Vercel (needs Puppeteer/Chrome). Generate locally: npx prisma generate with erd block uncommented, or use prisma-erd-generator separately.
+// generator erd {
+//   provider = "prisma-erd-generator"
+//   output   = "./erd.svg"
+// }
 
 datasource db {
   provider = "postgresql"
