@@ -8,7 +8,8 @@
     "build": "next build && pm2 restart sso",
     "vercel-build": "DISABLE_ERD=true prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:entroly": "node scripts/use-entroly-db.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
